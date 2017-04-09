@@ -5,7 +5,6 @@
 import unittest
 import json
 import requests
-import twitter_info # Requires you to have a twitter_info file in this directory
 from bs4 import BeautifulSoup
 import re
 
