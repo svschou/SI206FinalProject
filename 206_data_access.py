@@ -27,15 +27,19 @@ class NationalPark():
 	def __init__(self, html_string):
 		# Use BeautifulSoup on HTML string
 		soup = BeautifulSoup(html_string, "html.parser")
-		text_info = soup.find_all("div", {"class":"col-md-9 col-sm-9 col-xs-12 table-cell list_left"})
-		for park in text_info:
-			self.park_name = park.find("h3").text
-			self.park_type = park.find("h2").text
-			self.park_location = park.find("h4").text
-			self.park_description = park.find("p").text
-		link_info = soup.find_all("div", {"class":"col-md-3 col-sm-3 col-xs-12 result-details-container table-cell list_right"})
-		for park in link_info:
-			print(park.find_all("a")[0]["href"])
+
+		title_info = soup.find("div", {"class":"Hero-titleContainer clearfix"})
+		self.park_name = title_info.find("a").text
+		self.park_type = title_info.find("span", {"class":"Hero-designation"}).text
+		self.park_location = title_info.find("span", {"class":"Hero-location"}).text
+		
+		desc_info = soup.find("div", {"class":"Component text-content-size text-content-style"})	
+		self.park_description = desc_info.find("p").text
+
+		print("is this working")
+		# link_info = soup.find_all("div", {"class":"col-md-3 col-sm-3 col-xs-12 result-details-container table-cell list_right"})
+		# for park in link_info:
+		# 	print(park.find_all("a")[0]["href"])
 
 	def similar_park(self, park):
 		# compares two NationalPark instances to see if they are the same park type
@@ -88,9 +92,16 @@ def get_parks_data():
 
 		for state_href in hrefs_list:
 			state = state_href.find("a")
-			r = requests.get("https://www.nps.gov"+state["href"])
-			html_strings.append(r.text)
-
+			res = requests.get("https://www.nps.gov"+state["href"])
+			# html_strings.append(r.text)
+			state_soup = BeautifulSoup(res.text, "html.parser")
+			parks_list = state_soup.find_all("div", {"class":"col-md-9 col-sm-9 col-xs-12 table-cell list_left"})
+			for park in parks_list:
+				park_h3 = park.find("h3")
+				park_link = park_h3.find("a")
+				# print(park_link["href"])
+				r = requests.get("https://www.nps.gov"+park_link["href"]+"index.htm")
+				html_strings.append(r.text)
 
 		CACHE_DICTION["parks_data"] = html_strings
 
@@ -111,27 +122,30 @@ def get_article_data():
 # call get_parks_data
 # a list of html strings, each representing one state
 html_parks = get_parks_data()
+# for park in html_parks:
+# 	print("PARK INFO:\n", park)
 
-# print(html_parks)
 # create list of NationalPark instances
 # test_park = NationalPark(html_parks[0])
 
 park_instances = []
 
 # loop through each state html string
-for state in html_parks:
-	soup = BeautifulSoup(state, "html.parser")
-	park_list = soup.find_all("li", {"class":"clearfix"})
-	# loop through each park
-	for park in park_list:
-		temp_park = NationalPark(str(park)) 
-		park_instances.append(temp_park)
+# for state in html_parks:
+# 	soup = BeautifulSoup(state, "html.parser")
+# 	park_list = soup.find_all("li", {"class":"clearfix"})
+# 	# loop through each park
+# 	for park in park_list:
+# 		temp_park = NationalPark(str(park)) 
+# 		park_instances.append(temp_park)
 
+temp_park = NationalPark(html_parks[0])
+print(temp_park.park_name)
 
 # soup = BeautifulSoup(html_parks[0], "html.parser")
 # parks_list = soup.find_all("li", {"class":"clearfix"})
 # # print("FIRST PARK:	\n" parks_list[0])
-# print(type(str(parks_list[0])))
+# print(str(parks_list[0]))
 
 # test_park = NationalPark(str(parks_list[0]))
 # print(test_park.park_name+"\n"+test_park.park_type+"\n"+test_park.park_location+test_park.park_description+"\n"+test_park.park_link)
