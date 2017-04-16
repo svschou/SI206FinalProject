@@ -20,6 +20,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import re
+import sqlite3
 
 # Begin filling in instructions....
 # Define NationalPark class that takes in an HTML string representing one National Park
@@ -95,13 +96,13 @@ def get_parks_data():
 		print("Getting new data:	")
 		base_url = "https://www.nps.gov/index.htm"
 
+		html_strings = []
+
 		resp = requests.get(base_url)
 		soup = BeautifulSoup(resp.text, "html.parser")
 
 		dropdown_menu = soup.find("ul", {"class":"dropdown-menu SearchBar-keywordSearch"})
 		hrefs_list = dropdown_menu.find_all("li")
-		
-		html_strings = []
 
 		for state_href in hrefs_list:
 			state = state_href.find("a")
@@ -126,78 +127,129 @@ def get_parks_data():
 
 def get_article_data():
 	# check cache/get data
-	pass
+	if "articles_data" in CACHE_DICTION:
+		print("Using cached data:	")
+		html_strings = CACHE_DICTION["articles_data"]
+	else:
+		print("Getting new data:	")
+		base_url = "https://www.nps.gov/index.htm"
+
+		html_strings = []
+
+		resp = requests.get(base_url)
+		soup = BeautifulSoup(resp.text, "html.parser")
+
+		medium_articles = soup.find_all("div", {"class":"Component Feature -medium"})
+		for article in medium_articles:
+			article_link = article.find("a")
+			r = requests.get("https://www.nps.gov"+article_link["href"])
+			html_strings.append(r.text)
+		small_articles = soup.find_all("div", {"class":"Component Feature -small"})
+		for article in small_articles:
+			article_link = article.find("a")
+			r = requests.get("https://www.nps.gov"+article_link["href"])
+			html_strings.append(r.text)
+
+		CACHE_DICTION["articles_data"] = html_strings
+
+		file_obj = open("206_final_project_cache.json", "w")
+		file_obj.write(json.dumps(CACHE_DICTION))
+		file_obj.close()
+
+	return html_strings
 
 # call get_parks_data
-
-# a list of html strings, each representing one park
-html_parks = get_parks_data()
+html_parks = get_parks_data() # a list of html strings, each representing one park
 
 # create list of NationalPark instances
+park_instances = [NationalPark(park) for park in html_parks]
 
-test_park = NationalPark(html_parks[0])
-print(test_park.return_park_tup())
+# # loop through each park html string
+# for park in html_parks:
+# 	temp_park = NationalPark(park)
+# 	park_instances.append(temp_park)
 
-park_instances = []
-
-# loop through each state html string
-for park in html_parks:
-	temp_park = NationalPark(park)
-	print(type(temp_park))
-	park_instances.append(temp_park)
-
+park_instances_dict = {}
 for park in park_instances:
-	print(park.return_park_tup())
+	if park.park_name not in park_instances_dict:
+		park_instances_dict[park.park_name] = park.return_park_tup()
 
+sorted_park_instances_list = sorted(park_instances_dict)
+sorted_park_instances_dict = {park:park_instances_dict[park] for park in sorted_park_instances_list}
+# print(sorted_park_instances_dict)
+
+# for park in park_instances:
+# 	print(park.return_park_tup())
 
 # call get_articles_data
+html_articles = get_article_data()
+
 # create a list of Article instances
 
 # do something with States/average temps
 
 # create database file
-# conn = sqlite3.connect('206_final_project.db')
-# cur = conn.cursor()
+conn = sqlite3.connect('206_final_project.db')
+cur = conn.cursor()
 
-# CREATE PARKS TABLE
-# CREATE ARTICLES TABLE
-# CREATE STATES TABLE
+# CREATE PARKS TABLE - similar to project 3 code
+cur.execute('DROP TABLE IF EXISTS Parks')
+table_spec = 'CREATE TABLE IF NOT EXISTS Parks (park_name TEXT PRIMARY KEY, park_description TEXT, park_type TEXT, park_location TEXT, park_link TEXT)'
+cur.execute(table_spec)
+
+# CREATE ARTICLES TABLE - similar to project 3 code
+cur.execute('DROP TABLE IF EXISTS Articles')
+table_spec = 'CREATE TABLE IF NOT EXISTS Articles (article_title TEXT PRIMARY KEY, article_text TEXT, article_url TEXT)'
+cur.execute(table_spec)
+
+# CREATE STATES TABLE - similar to project 3 code
+cur.execute('DROP TABLE IF EXISTS States')
+table_spec = 'CREATE TABLE IF NOT EXISTS States (name TEXT PRIMARY KEY, abbreviation TEXT, av_temp TEXT)'
+cur.execute(table_spec)
+
+parks_statement = 'INSERT INTO Parks VALUES (?, ?, ?, ?, ?)'
+articles_statement = 'INSERT INTO Articles VALUES (?, ?, ?)'
+states_statement = 'INSERT INTO States VALUES (?, ?, ?)'
 
 # LOAD PARKS DATA INTO TABLE
+for park in sorted_park_instances_dict:
+	if sorted_park_instances_dict[park][0] != "Empty":
+		cur.execute(parks_statement, sorted_park_instances_dict[park])
 # LOAD ARTICLES DATA INTO TABLE
+
 # LOAD STATES DATA INTO TABLE
 
+conn.commit()
 
-
-
+# make queries to database
 
 
 
 # CLOSE DATABASE FILE
-# cur.close()
+cur.close()
 
 # Put your tests here, with any edits you now need from when you turned them in with your project plan.
 class NationalParkTest(unittest.TestCase):
 	def test_constructor_park_name(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(html_parks[0])
 		self.assertEqual(type(test_park.park_name), type("Yosemite"), "Testing that park_name variable is of type string")
 	def test_constructor_park_link(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(htmlparks[1])
 		self.assertEqual("http" in test_park.park_link, True, "Testing that 'http' is in the park_link URL string")
 	def test_constructor_park_location(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(html_parks[2])
 		self.assertEqual(len(test_park.park_location) > 0, True, "Testing that the park_location has more than one character")
 	def test_get_states_1(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(html_parks[3])
 		self.assertEqual(type(test_park.get_states()), type([]), "Testing that the return type of get_states is a list")
 	def test_get_states_2(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(html_parks[-1])
 		self.assertEqual(type(test_park.get_states()[0]), type("String"), "Testing that the type of the first element of the list returned by get_states is a string")
 	def test_return_park_tup_type(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(html_parks[0])
 		self.assertEqual(type(test_park.return_park_tup()), type(()), "Testing that the type of the return value for return_park_tup is a tuple")
 	def test_return_park_tup_len(self):
-		test_park = NationalPark(html_string)
+		test_park = NationalPark(html_parks[1])
 		self.assertEqual(len(test_park.return_park_tup()), 5, "Testing that there are 5 items in the tuple return")
 
 class ArticleTest(unittest.TestCase):
@@ -216,6 +268,12 @@ class get_parks_dataTest(unittest.TestCase):
 		self.assertEqual(type(get_parks_data()), type([]), "Testing that the return value of get_parks_data is a list")
 	def test_get_parks_data_2(self):
 		self.assertEqual(type(get_parks_data()[0]), type(""), "Testing that the type of first value returned by get_parks_data is a string (an HTML string)")
+
+class get_article_dataTest(unittest.TestCase):
+	def test_get_article_data_1(self):
+		self.assertEqual(type(get_article_data()), type([]), "Testing that the return value of get_article_data is a list")
+	def test_get_article_data_2(self):
+		self.assertEqual(type(get_article_data()[0]), type(""), "Testing that the type of first value returned by get_article_data is a string (an HTML string)")
 
 # Remember to invoke your tests so they will run! (Recommend using the verbosity=2 argument.)
 if __name__ == "__main__":
