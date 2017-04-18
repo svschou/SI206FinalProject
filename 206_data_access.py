@@ -69,10 +69,16 @@ class NationalPark():
 class Article():
 	def __init__(self, html_string):
 		# Use BeautifulSoup on HTML string
+		try:
+			soup = BeautifulSoup(html_string)
+		except:
+			self.article_title = "Empty"
+			self.article_text = "Empty"
 		pass
 
 	def return_article_tup(self):
-		pass
+		return (self.article_title, self.article_text)
+
 
 	def __str__(self):
 		pass
@@ -158,10 +164,55 @@ def get_article_data():
 
 	return html_strings
 
+def get_states_data():
+	if "states_data" in CACHE_DICTION:
+		print("Using cached data:	")
+		temps_dict = CACHE_DICTION["states_data"]
+		# print(temps_dict)
+	else:
+		print("Getting new data:	")
+		base_url = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
+
+		temps_dict = {}
+
+		resp = requests.get(base_url)
+		soup = BeautifulSoup(resp.text, "html.parser")
+
+		sections = soup.find_all("table", {"class":"articletable tablecol-1-left"})
+		for section in sections:
+			rows = section.find_all("tr")
+			for row in rows:
+				state = row.find_all("td")
+				state = list(state)
+				try:
+					state_name = state[0].text
+					state_temp = state[1].text
+				except:
+					state_name = ""
+					state_temp = ""
+				
+				if len(state_name) > 0:
+					temps_dict[state_name] = state_temp
+
+		CACHE_DICTION["states_data"] = temps_dict
+
+		file_obj = open("206_final_project_cache.json", "w")
+		file_obj.write(json.dumps(CACHE_DICTION))
+		file_obj.close()
+
+	return temps_dict
+
+abbrev_dict = {"AL":"Alabama", "AK":"Alaska", "AS":"American Samoa", "AZ":"Arizona", "AR":"Arkansas", "CA":"California", "CO":"Colorado", "CT":"Connecticut", "DE":"Delaware", "DC":"District of Columbia", "FL":"Florida", "GA":"Georgia", "GU":"Guam", "HI":"Hawaii", "ID":"Idaho", "IL":"Illinois", "IN":"Indiana", "IA":"Iowa", "KS":"Kansas", "KY":"Kentucky", "LA":"Louisiana", "ME":"Maine", "MD":"Maryland", "MH":"Marshall Islands", "MA":"Massachusetts", "MI":"Michigan", "FM":"Micronesia", "MN":"Minnesota", "MS":"Mississippi", "MO":"Missouri", "MT":"Montana", "NE":"Nebraska", "NV":"Nevada", "NH":"New Hampshire", "NJ":"New Jersey", "NM":"New Mexico", "NY":"New York", "NC":"North Carolina", "ND":"North Dakota", "MP":"Northern Marianas", "OH":"Ohio", "OK":"Oklahoma", "OR":"Oregon", "PW":"Palau", "PA":"Pennsylvania", "PR":"Puerto Rico", "RI":"Rhode Island", "SC":"South Carolina", "SD":"South Dakota", "TN":"Tennessee", "TX":"Texas", "UT":"Utah", "VT":"Vermont", "VA":"Virginia", "VI":"Virgin Islands", "WA":"Washington", "WV":"West Virginia", "WI":"Wisconsin", "WY":"Wyoming"}
+
+state_dict = {}
+for abbrev in abbrev_dict:
+	state_dict[abbrev_dict[abbrev]] = abbrev
+# print(state_dict)
+
 # call get_parks_data
 html_parks = get_parks_data() # a list of html strings, each representing one park
 
-# create list of NationalPark instances
+# create list of NationalPark instances using list comphrehension
 park_instances = [NationalPark(park) for park in html_parks]
 
 # # loop through each park html string
@@ -187,6 +238,8 @@ html_articles = get_article_data()
 # create a list of Article instances
 
 # do something with States/average temps
+state_temps = get_states_data()
+# print(state_temps)
 
 # create database file
 conn = sqlite3.connect('206_final_project.db')
@@ -218,7 +271,8 @@ for park in sorted_park_instances_dict:
 # LOAD ARTICLES DATA INTO TABLE
 
 # LOAD STATES DATA INTO TABLE
-
+for state in state_temps:
+	cur.execute(states_statement,(state, state_dict[state], state_temps[state]))
 conn.commit()
 
 # make queries to database
