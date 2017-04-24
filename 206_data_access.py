@@ -70,11 +70,18 @@ class Article():
 	def __init__(self, html_string):
 		# Use BeautifulSoup on HTML string
 		try:
-			soup = BeautifulSoup(html_string)
+			soup = BeautifulSoup(html_string, "html.parser")
+			self.article_title = soup.find("h1").text
+			# print(self.article_title)
+
+			self.article_text = ""
+			paragraph_text = soup.find_all("p")
+			for p_text in paragraph_text:
+				self.article_text += p_text.text
 		except:
 			self.article_title = "Empty"
 			self.article_text = "Empty"
-		pass
+
 
 	def return_article_tup(self):
 		return (self.article_title, self.article_text)
@@ -211,7 +218,6 @@ for abbrev in abbrev_dict:
 
 # call get_parks_data
 html_parks = get_parks_data() # a list of html strings, each representing one park
-
 # create list of NationalPark instances using list comphrehension
 park_instances = [NationalPark(park) for park in html_parks]
 
@@ -232,27 +238,30 @@ sorted_park_instances_dict = {park:park_instances_dict[park] for park in sorted_
 # for park in park_instances:
 # 	print(park.return_park_tup())
 
+
+
 # call get_articles_data
 html_articles = get_article_data()
-
 # create a list of Article instances
+article_instances = [Article(article) for article in html_articles]
 
-# do something with States/average temps
+
+
+# call get_states_data
 state_temps = get_states_data()
 # print(state_temps)
-
 # create database file
 conn = sqlite3.connect('206_final_project.db')
 cur = conn.cursor()
 
 # CREATE PARKS TABLE - similar to project 3 code
 cur.execute('DROP TABLE IF EXISTS Parks')
-table_spec = 'CREATE TABLE IF NOT EXISTS Parks (park_name TEXT PRIMARY KEY, park_description TEXT, park_type TEXT, park_location TEXT, park_link TEXT)'
+table_spec = 'CREATE TABLE IF NOT EXISTS Parks (park_name TEXT PRIMARY KEY, park_type TEXT, park_location TEXT, park_description TEXT, park_link TEXT)'
 cur.execute(table_spec)
 
 # CREATE ARTICLES TABLE - similar to project 3 code
 cur.execute('DROP TABLE IF EXISTS Articles')
-table_spec = 'CREATE TABLE IF NOT EXISTS Articles (article_title TEXT PRIMARY KEY, article_text TEXT, article_url TEXT)'
+table_spec = 'CREATE TABLE IF NOT EXISTS Articles (article_title TEXT PRIMARY KEY, article_text TEXT)'
 cur.execute(table_spec)
 
 # CREATE STATES TABLE - similar to project 3 code
@@ -261,7 +270,7 @@ table_spec = 'CREATE TABLE IF NOT EXISTS States (name TEXT PRIMARY KEY, abbrevia
 cur.execute(table_spec)
 
 parks_statement = 'INSERT INTO Parks VALUES (?, ?, ?, ?, ?)'
-articles_statement = 'INSERT INTO Articles VALUES (?, ?, ?)'
+articles_statement = 'INSERT INTO Articles VALUES (?, ?)'
 states_statement = 'INSERT INTO States VALUES (?, ?, ?)'
 
 # LOAD PARKS DATA INTO TABLE
@@ -269,7 +278,8 @@ for park in sorted_park_instances_dict:
 	if sorted_park_instances_dict[park][0] != "Empty":
 		cur.execute(parks_statement, sorted_park_instances_dict[park])
 # LOAD ARTICLES DATA INTO TABLE
-
+for article in article_instances:
+	cur.execute(articles_statement, article.return_article_tup())
 # LOAD STATES DATA INTO TABLE
 for state in state_temps:
 	cur.execute(states_statement,(state, state_dict[state], state_temps[state]))
@@ -288,8 +298,8 @@ class NationalParkTest(unittest.TestCase):
 		test_park = NationalPark(html_parks[0])
 		self.assertEqual(type(test_park.park_name), type("Yosemite"), "Testing that park_name variable is of type string")
 	def test_constructor_park_link(self):
-		test_park = NationalPark(htmlparks[1])
-		self.assertEqual("http" in test_park.park_link, True, "Testing that 'http' is in the park_link URL string")
+		test_park = NationalPark(html_parks[0])
+		self.assertEqual("http" in test_park.park_link, True, "Testing that 'http' is in the park_link, because we want a URL string")
 	def test_constructor_park_location(self):
 		test_park = NationalPark(html_parks[2])
 		self.assertEqual(len(test_park.park_location) > 0, True, "Testing that the park_location has more than one character")
@@ -304,18 +314,22 @@ class NationalParkTest(unittest.TestCase):
 		self.assertEqual(type(test_park.return_park_tup()), type(()), "Testing that the type of the return value for return_park_tup is a tuple")
 	def test_return_park_tup_len(self):
 		test_park = NationalPark(html_parks[1])
-		self.assertEqual(len(test_park.return_park_tup()), 5, "Testing that there are 5 items in the tuple return")
+		self.assertEqual(len(test_park.return_park_tup()), 5, "Testing that there are 5 items in the tuple returned by return_park_tup")
 
 class ArticleTest(unittest.TestCase):
 	def test_constructor_article_title(self):
-		test_article = Article(html_string)
+		test_article = Article(html_articles[0])
 		self.assertEqual(type(test_article.article_title), type("Title"), "Testing that article_title instance variable is of type string")
 	def test_constructor_article_text(self):
-		test_article = Article(html_string)
+		test_article = Article(html_articles[1])
 		self.assertEqual(len(test_article.article_text) > 0, True, "Testing that the article_text has more than one character")
-	def test_constructor_article_descriptions(self):
-		test_article = Article(html_string)
-		self.assertEqual(type(test_article.article_descriptions), type("Description"), "Testing that the article_description is of type string")
+	def test_return_article_tup_1(self):
+		test_article = Article(html_articles[2])
+		self.assertEqual(type(test_article.return_article_tup()),type(()), "Testing that the type of the return value for return_article_tup is a tuple")
+	def test_return_article_tup_2(self):
+		test_article = Article(html_articles[0])
+		self.assertEqual(len(test_article.return_article_tup()), 2, "Testing that there are 2 items in the tuple returned by return_article_tup")
+
 
 class get_parks_dataTest(unittest.TestCase):
 	def test_get_parks_data_1(self):
@@ -328,6 +342,14 @@ class get_article_dataTest(unittest.TestCase):
 		self.assertEqual(type(get_article_data()), type([]), "Testing that the return value of get_article_data is a list")
 	def test_get_article_data_2(self):
 		self.assertEqual(type(get_article_data()[0]), type(""), "Testing that the type of first value returned by get_article_data is a string (an HTML string)")
+
+class get_states_dataTest(unittest.TestCase):
+	def test_get_states_data_1(self):
+		self.assertEqual(type(get_states_data()), type({}), "Testing that the return value of get_states_data is a dictionary")
+	def test_get_states_data_2(self):
+		self.assertEqual(type(get_states_data()["Michigan"]), type(""), "Testing that the value for Michigan in the temps dictionary returned by get_states_data is a string")
+	def test_get_states_data_3(self):
+		self.assertEqual(get_states_data()["Michigan"], "44.4", "Testing that the value for the Michigan key in the temps dictionary returned by get_states_data is 44.4")
 
 # Remember to invoke your tests so they will run! (Recommend using the verbosity=2 argument.)
 if __name__ == "__main__":
