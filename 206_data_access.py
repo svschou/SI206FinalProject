@@ -51,7 +51,11 @@ class NationalPark():
 
 	def similar_park(self, park):
 		# compares two NationalPark instances to see if they are the same park type
-		pass
+		if self.park_type == park.park_type:
+			
+			return "These parks are similar! Both " + self.park_name + " and " + park.park_name + " are a " + self.park_type + "."
+		else:
+			return "These parks are different! " + self.park_name + " is a " + self.park_type + ", while " + park.park_name + " is a " + park.park_type + "."
 
 	def return_park_tup(self):
 		# return a tuple for each instance for easy loading into database
@@ -221,10 +225,9 @@ html_parks = get_parks_data() # a list of html strings, each representing one pa
 # create list of NationalPark instances using list comphrehension
 park_instances = [NationalPark(park) for park in html_parks]
 
-# # loop through each park html string
-# for park in html_parks:
-# 	temp_park = NationalPark(park)
-# 	park_instances.append(temp_park)
+# Testing NationalPark.similar_park()
+for x in range(5):
+	print(park_instances[x].similar_park(park_instances[x+1]))
 
 park_instances_dict = {}
 for park in park_instances:
