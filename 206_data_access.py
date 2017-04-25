@@ -57,18 +57,36 @@ class NationalPark():
 		else:
 			return "These parks are different! " + self.park_name + " is a " + self.park_type + ", while " + park.park_name + " is a " + park.park_type + "."
 
-	def return_park_tup(self):
-		# return a tuple for each instance for easy loading into database
-		return (self.park_name, self.park_type, self.park_location, self.park_description, self.park_link)
-
 	def get_states(self):
 		# use regular expressions on self.park_location to find two capital letter abbreviations or state names
-		# look through dictionary of states 
-		pass 
+		# look through dictionary of states
 
+		state_list = []
+		# if park location already a full state name
+		if self.park_location in state_dict:
+			# add the full state name
+			state_list.append(self.park_location)
+		# if the park location includes a list of abbreviations aka a comma is in the park location
+		elif "," in self.park_location:
+			abbrevs = re.findall("[A-Z]*[A-Z]", self.park_location)
+			for abbrev in abbrevs:
+				state_list.append(abbrev_dict[abbrev])
+		# catching all territories/non-US states
+		elif self.park_location == "Hawai'i":
+			state_list.append("Hawaii")
+		else:
+			state_list.append(self.park_location)
+		
+		state_string = ""
+		for state in state_list:
+			state_string += state
+			state_string += ", "
+		return state_string[:-2]
 
-	def __str__(self):
-		pass
+	def return_park_tup(self):
+
+		# return a tuple for each instance for easy loading into database
+		return (self.park_name, self.park_type, self.get_states(), self.park_description, self.park_link)
 
 class Article():
 	def __init__(self, html_string):
@@ -198,6 +216,9 @@ def get_states_data():
 				try:
 					state_name = state[0].text
 					state_temp = state[1].text
+					# Catching Hawai'i spelling
+					if state_name == "Hawaii":
+						state_name = "Hawai'i"
 				except:
 					state_name = ""
 					state_temp = ""
@@ -218,16 +239,14 @@ abbrev_dict = {"AL":"Alabama", "AK":"Alaska", "AS":"American Samoa", "AZ":"Arizo
 state_dict = {}
 for abbrev in abbrev_dict:
 	state_dict[abbrev_dict[abbrev]] = abbrev
-# print(state_dict)
+print(state_dict)
 
 # call get_parks_data
 html_parks = get_parks_data() # a list of html strings, each representing one park
 # create list of NationalPark instances using list comphrehension
 park_instances = [NationalPark(park) for park in html_parks]
 
-# Testing NationalPark.similar_park()
-for x in range(5):
-	print(park_instances[x].similar_park(park_instances[x+1]))
+
 
 park_instances_dict = {}
 for park in park_instances:
@@ -241,7 +260,13 @@ sorted_park_instances_dict = {park:park_instances_dict[park] for park in sorted_
 # for park in park_instances:
 # 	print(park.return_park_tup())
 
+# Testing NationalPark.similar_park()
+for x in range(5):
+	print(park_instances[x].similar_park(park_instances[x+1]))
 
+# Testing NationalPark.get_states()
+for x in range(30):
+	print(park_instances[x].get_states())
 
 # call get_articles_data
 html_articles = get_article_data()
@@ -269,7 +294,7 @@ cur.execute(table_spec)
 
 # CREATE STATES TABLE - similar to project 3 code
 cur.execute('DROP TABLE IF EXISTS States')
-table_spec = 'CREATE TABLE IF NOT EXISTS States (name TEXT PRIMARY KEY, abbreviation TEXT, av_temp TEXT)'
+table_spec = 'CREATE TABLE IF NOT EXISTS States (state_name TEXT PRIMARY KEY, state_abbreviation TEXT, state_av_temp TEXT)'
 cur.execute(table_spec)
 
 parks_statement = 'INSERT INTO Parks VALUES (?, ?, ?, ?, ?)'
@@ -306,12 +331,23 @@ class NationalParkTest(unittest.TestCase):
 	def test_constructor_park_location(self):
 		test_park = NationalPark(html_parks[2])
 		self.assertEqual(len(test_park.park_location) > 0, True, "Testing that the park_location has more than one character")
+
+	def test_similar_park_1(self):
+		test_park_1 = NationalPark(html_parks[0])
+		test_park_2 = NationalPark(html_parks[1])
+		self.assertEqual(type(test_park_1.similar_park(test_park_2)), type(""), "Testing that the return type of similar_park is a string")
+	def test_similar_park_2(self):
+		test_park_1 = NationalPark(html_parks[1])
+		test_park_2 = NationalPark(html_parks[2])
+		self.assertEqual("These parks are" in test_park_1.similar_park(test_park_2), True, "Testing that the string returned by similar_park includes 'These parks are'")
+
 	def test_get_states_1(self):
 		test_park = NationalPark(html_parks[3])
 		self.assertEqual(type(test_park.get_states()), type([]), "Testing that the return type of get_states is a list")
 	def test_get_states_2(self):
-		test_park = NationalPark(html_parks[-1])
-		self.assertEqual(type(test_park.get_states()[0]), type("String"), "Testing that the type of the first element of the list returned by get_states is a string")
+		test_park = NationalPark(html_parks[0])
+		self.assertEqual(len(test_park.get_states()) > 0, True, "Testing that the type of the first element of the list returned by get_states is a string")
+
 	def test_return_park_tup_type(self):
 		test_park = NationalPark(html_parks[0])
 		self.assertEqual(type(test_park.return_park_tup()), type(()), "Testing that the type of the return value for return_park_tup is a tuple")
@@ -326,6 +362,7 @@ class ArticleTest(unittest.TestCase):
 	def test_constructor_article_text(self):
 		test_article = Article(html_articles[1])
 		self.assertEqual(len(test_article.article_text) > 0, True, "Testing that the article_text has more than one character")
+
 	def test_return_article_tup_1(self):
 		test_article = Article(html_articles[2])
 		self.assertEqual(type(test_article.return_article_tup()),type(()), "Testing that the type of the return value for return_article_tup is a tuple")
