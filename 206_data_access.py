@@ -24,7 +24,7 @@ import sqlite3
 import collections
 
 # Begin filling in instructions....
-# Define NationalPark class that takes in an HTML string representing one National Park
+# Define NationalPark class that takes in an HTML string representing one national park
 class NationalPark():
 	def __init__(self, html_string):
 		# Use BeautifulSoup on HTML string
@@ -73,8 +73,6 @@ class NationalPark():
 			for abbrev in abbrevs:
 				state_list.append(abbrev_dict[abbrev])
 		# catching all territories/non-US states
-		elif self.park_location == "Hawai'i":
-			state_list.append("Hawaii")
 		else:
 			state_list.append(self.park_location)
 		
@@ -85,7 +83,6 @@ class NationalPark():
 		return state_string[:-2]
 
 	def return_park_tup(self):
-
 		# return a tuple for each instance for easy loading into database
 		return (self.park_name, self.park_type, self.get_states(), self.park_description, self.park_link)
 
@@ -107,14 +104,11 @@ class Article():
 
 
 	def return_article_tup(self):
+		# return a tuple for each instance for easy loading into database
 		return (self.article_title, self.article_text)
 
-
-	def __str__(self):
-		pass
-
-CACHE_FNAME = "206_final_project_cache.json"
 # Put the rest of your caching setup here:
+CACHE_FNAME = "206_final_project_cache.json"
 
 try:
 	cache_file = open(CACHE_FNAME,'r')
@@ -143,13 +137,13 @@ def get_parks_data():
 		for state_href in hrefs_list:
 			state = state_href.find("a")
 			res = requests.get("https://www.nps.gov"+state["href"])
-			# html_strings.append(r.text)
+			
 			state_soup = BeautifulSoup(res.text, "html.parser")
 			parks_list = state_soup.find_all("div", {"class":"col-md-9 col-sm-9 col-xs-12 table-cell list_left"})
 			for park in parks_list:
 				park_h3 = park.find("h3")
 				park_link = park_h3.find("a")
-				# print(park_link["href"])
+				
 				r = requests.get("https://www.nps.gov"+park_link["href"]+"index.htm")
 				html_strings.append(r.text)
 
@@ -162,7 +156,6 @@ def get_parks_data():
 	return html_strings
 
 def get_article_data():
-	# check cache/get data
 	if "articles_data" in CACHE_DICTION:
 		print("Using cached data:	")
 		html_strings = CACHE_DICTION["articles_data"]
@@ -198,7 +191,7 @@ def get_states_data():
 	if "states_data" in CACHE_DICTION:
 		print("Using cached data:	")
 		temps_dict = CACHE_DICTION["states_data"]
-		# print(temps_dict)
+		
 	else:
 		print("Getting new data:	")
 		base_url = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
@@ -235,7 +228,7 @@ def get_states_data():
 
 	return temps_dict
 
-abbrev_dict = {"AL":"Alabama", "AK":"Alaska", "AS":"American Samoa", "AZ":"Arizona", "AR":"Arkansas", "CA":"California", "CO":"Colorado", "CT":"Connecticut", "DE":"Delaware", "DC":"District of Columbia", "FL":"Florida", "GA":"Georgia", "GU":"Guam", "HI":"Hawaii", "ID":"Idaho", "IL":"Illinois", "IN":"Indiana", "IA":"Iowa", "KS":"Kansas", "KY":"Kentucky", "LA":"Louisiana", "ME":"Maine", "MD":"Maryland", "MH":"Marshall Islands", "MA":"Massachusetts", "MI":"Michigan", "FM":"Micronesia", "MN":"Minnesota", "MS":"Mississippi", "MO":"Missouri", "MT":"Montana", "NE":"Nebraska", "NV":"Nevada", "NH":"New Hampshire", "NJ":"New Jersey", "NM":"New Mexico", "NY":"New York", "NC":"North Carolina", "ND":"North Dakota", "MP":"Northern Marianas", "OH":"Ohio", "OK":"Oklahoma", "OR":"Oregon", "PW":"Palau", "PA":"Pennsylvania", "PR":"Puerto Rico", "RI":"Rhode Island", "SC":"South Carolina", "SD":"South Dakota", "TN":"Tennessee", "TX":"Texas", "UT":"Utah", "VT":"Vermont", "VA":"Virginia", "VI":"Virgin Islands", "WA":"Washington", "WV":"West Virginia", "WI":"Wisconsin", "WY":"Wyoming"}
+abbrev_dict = {"AL":"Alabama", "AK":"Alaska", "AS":"American Samoa", "AZ":"Arizona", "AR":"Arkansas", "CA":"California", "CO":"Colorado", "CT":"Connecticut", "DE":"Delaware", "DC":"District of Columbia", "FL":"Florida", "GA":"Georgia", "GU":"Guam", "HI":"Hawai'i", "ID":"Idaho", "IL":"Illinois", "IN":"Indiana", "IA":"Iowa", "KS":"Kansas", "KY":"Kentucky", "LA":"Louisiana", "ME":"Maine", "MD":"Maryland", "MH":"Marshall Islands", "MA":"Massachusetts", "MI":"Michigan", "FM":"Micronesia", "MN":"Minnesota", "MS":"Mississippi", "MO":"Missouri", "MT":"Montana", "NE":"Nebraska", "NV":"Nevada", "NH":"New Hampshire", "NJ":"New Jersey", "NM":"New Mexico", "NY":"New York", "NC":"North Carolina", "ND":"North Dakota", "MP":"Northern Marianas", "OH":"Ohio", "OK":"Oklahoma", "OR":"Oregon", "PW":"Palau", "PA":"Pennsylvania", "PR":"Puerto Rico", "RI":"Rhode Island", "SC":"South Carolina", "SD":"South Dakota", "TN":"Tennessee", "TX":"Texas", "UT":"Utah", "VT":"Vermont", "VA":"Virginia", "VI":"Virgin Islands", "WA":"Washington", "WV":"West Virginia", "WI":"Wisconsin", "WY":"Wyoming"}
 
 state_dict = {}
 for abbrev in abbrev_dict:
@@ -246,16 +239,10 @@ html_parks = get_parks_data() # a list of html strings, each representing one pa
 # create list of NationalPark instances using list comphrehension
 park_instances = [NationalPark(park) for park in html_parks]
 
-
-# FIX THIS AND THEN DOWN WHERE LOADING THE DATA
 park_instances_dict = {}
 for park in park_instances:
 	if park.park_name not in park_instances_dict:
 		park_instances_dict[park.park_name] = park.return_park_tup()
-
-sorted_park_instances_list = sorted(park_instances_dict)
-sorted_park_instances_dict = {park:park_instances_dict[park] for park in sorted_park_instances_list}
-# print(sorted_park_instances_dict)
 
 
 # Testing NationalPark.similar_park()
@@ -272,11 +259,10 @@ html_articles = get_article_data()
 article_instances = [Article(article) for article in html_articles]
 
 
-
 # call get_states_data
 state_temps = get_states_data()
-# print(state_temps)
-# create database file
+
+# CREATE DATABASE FILE
 conn = sqlite3.connect('206_final_project.db')
 cur = conn.cursor()
 
@@ -300,9 +286,9 @@ articles_statement = 'INSERT INTO Articles VALUES (?, ?)'
 states_statement = 'INSERT INTO States VALUES (?, ?, ?)'
 
 # LOAD PARKS DATA INTO TABLE
-for park in sorted_park_instances_dict:
-	if sorted_park_instances_dict[park][0] != "Empty":
-		cur.execute(parks_statement, sorted_park_instances_dict[park])
+for park in park_instances_dict:
+	if park_instances_dict[park][0] != "Empty":
+		cur.execute(parks_statement, park_instances_dict[park])
 # LOAD ARTICLES DATA INTO TABLE
 for article in article_instances:
 	cur.execute(articles_statement, article.return_article_tup())
@@ -312,19 +298,20 @@ for state in state_temps:
 conn.commit()
 
 
-# make queries to database
-# find any National Park whose name occurs in the articles text, return the name of the park, the title of the article and the article text
+# MAKE QUERIES TO DATABASE
+# find any national park whose name occurs in the articles text, return the name of the park, the title of the article and the article text
 query = cur.execute("SELECT Parks.park_name, Articles.article_title, Articles.article_text FROM Articles INNER JOIN Parks ON instr(Articles.article_text, Parks.park_name)")
-parks_in_articles = cur.fetchall() # list of tuples
+park_in_articles = cur.fetchall() # list of tuples
 # for park in parks_in_articles:
 	# print(park)
 
-# find all the Natioal Parks that only reside in one state (only have one state in their location), return the state and the name of the park
+# find all the national parks that only reside in one state (only have one state in their location), return the state and the name of the park
 query = cur.execute("SELECT States.state_name, Parks.park_name FROM Parks INNER JOIN States ON States.state_name == Parks.park_location")
 nonshared_parks = cur.fetchall()
 # for park in non_shared_parks:
 # 	print(park)
 
+# fetch all the text from the articles collected
 query = cur.execute("SELECT article_text FROM Articles")
 text_of_articles = cur.fetchall()
 # for text in text_of_articles:
@@ -333,6 +320,8 @@ text_of_articles = cur.fetchall()
 query = cur.execute("SELECT Parks.park_name, States.state_name, States.state_av_temp FROM Parks INNER JOIN States ON States.state_name = Parks.park_location AND Parks.park_type = 'National Seashore'")
 national_seashores = cur.fetchall()
 
+# CLOSE DATABASE FILE
+cur.close()
 
 # DATA MANIPULATION: ACCUMULATION WITH DICTIONARIES
 nonshared_parks_count_dict = {}
@@ -350,7 +339,6 @@ for state in sorted_nonshared_counts[:3]:
 		if park_tup[0] == state:
 			list_of_parks.append(park_tup[1])
 	top_three_non_shared.append((state, nonshared_parks_count_dict[state], list_of_parks))
-# print(top_three_non_shared)
 
 # DATA MANIPULATION: LIST COMPREHENSION
 list_of_articles = [article_tup[0] for article_tup in text_of_articles]
@@ -363,10 +351,52 @@ total_article_words = total_article_text.split()
 article_word_counts = collections.Counter(total_article_words)
 article_top_three = article_word_counts.most_common(3)
 
+# accumulating parks per articles
+parks_in_articles = {}
+for art_tup in park_in_articles:
+	if art_tup[1] not in parks_in_articles:
+		parks_in_articles[art_tup[1]] = ([art_tup[0]], art_tup[2])
+	else:
+		parks_in_articles[art_tup[1]][0].append(art_tup[0])
+
+# CREATING OUTPUT FILE
+output_file = open("206_final_project_output.txt", "w")
+
+output_file.write("SI 206 Final Project Output by Stephanie Schouman\n\nThere are several different kinds of national parks. My similar_park method compares different types of parks: \n\n")
+
+# similar_parks output
+for num in range(5):
+	park1 = park_instances[num+9]
+	park2 = park_instances[num+14]
+	similar_park_string = park1.similar_park(park2)
+	output_file.write("    " + similar_park_string + "\n")
+
+output_file.write("\n\nThe following data represents some of the articles that include the names of national parks:\n\n")
+
+# 					CHANGE THIS
+for article in parks_in_articles:
+	output_file.write("Title of the article:    " + article + "\nParks mentioned:    ") 
+	for park in parks_in_articles[article][0]:
+		output_file.write(park + ", ")
+	output_file.write("\nText of the article:    " + parks_in_articles[article][1] + "\n\n")
+
+output_file.write("\n\nThese are the most used words in all of the articles:\n")
+for word in article_top_three:
+	output_file.write(word[0] + " was used " + str(word[1]) + " times\n")
 
 
-# CLOSE DATABASE FILE
-cur.close()
+output_file.write("\nThe following data represents the top three states with the most national parks that only exist in that state:\n\n")
+for park in top_three_non_shared:
+	output_file.write(park[0] + " has " + str(park[1]) + " parks:\n")
+	for park_name in park[2]:
+		output_file.write(park_name + "\n")
+	output_file.write("\n\n")
+
+output_file.write("The following data represents all of the national seashores and the average temperature of that state:\n\n")
+for seashore in national_seashores:
+	output_file.write(seashore[0] + " is in " + seashore[1] + ", where the average temperature is " + str(seashore[2]) + " degrees Fahrenheit\n")
+
+output_file.close()
 
 # Put your tests here, with any edits you now need from when you turned them in with your project plan.
 class NationalParkTest(unittest.TestCase):
