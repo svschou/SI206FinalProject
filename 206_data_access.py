@@ -239,7 +239,6 @@ abbrev_dict = {"AL":"Alabama", "AK":"Alaska", "AS":"American Samoa", "AZ":"Arizo
 state_dict = {}
 for abbrev in abbrev_dict:
 	state_dict[abbrev_dict[abbrev]] = abbrev
-print(state_dict)
 
 # call get_parks_data
 html_parks = get_parks_data() # a list of html strings, each representing one park
@@ -247,7 +246,7 @@ html_parks = get_parks_data() # a list of html strings, each representing one pa
 park_instances = [NationalPark(park) for park in html_parks]
 
 
-
+# FIX THIS AND THEN DOWN WHERE LOADING THE DATA
 park_instances_dict = {}
 for park in park_instances:
 	if park.park_name not in park_instances_dict:
@@ -257,16 +256,14 @@ sorted_park_instances_list = sorted(park_instances_dict)
 sorted_park_instances_dict = {park:park_instances_dict[park] for park in sorted_park_instances_list}
 # print(sorted_park_instances_dict)
 
-# for park in park_instances:
-# 	print(park.return_park_tup())
 
 # Testing NationalPark.similar_park()
-for x in range(5):
-	print(park_instances[x].similar_park(park_instances[x+1]))
+# for x in range(5):
+# 	print(park_instances[x].similar_park(park_instances[x+1]))
 
-# Testing NationalPark.get_states()
-for x in range(30):
-	print(park_instances[x].get_states())
+# # Testing NationalPark.get_states()
+# for x in range(30):
+# 	print(park_instances[x].get_states())
 
 # call get_articles_data
 html_articles = get_article_data()
@@ -313,10 +310,29 @@ for state in state_temps:
 	cur.execute(states_statement,(state, state_dict[state], state_temps[state]))
 conn.commit()
 
+
 # make queries to database
+# find any National Park whose name occurs in the articles text, return the name of the park, the title of the article and the article text
+query = cur.execute("SELECT Parks.park_name, Articles.article_title, Articles.article_text FROM Articles INNER JOIN Parks ON instr(Articles.article_text, Parks.park_name)")
+parks_in_articles = cur.fetchall() # list of tuples
+print(parks_in_articles)
+# for park in parks_in_articles:
+	# print(park)
 
+# find all the Natioal Parks that only reside in one state (only have one state in their location), return the state and the name of the park
+query = cur.execute("SELECT States.state_name, Parks.park_name FROM Parks INNER JOIN States ON States.state_name == Parks.park_location")
+non_shared_parks = cur.fetchall()
+# for park in non_shared_parks:
+# 	print(park)
 
+query = cur.execute("SELECT article_text FROM Articles")
+ext_of_articles = cur.fetchall()
+# for text in text_of_articles:
+# 	print(text)
 
+query = cur.execute("SELECT Parks.park_name, States.state_name, States.state_av_temp FROM Parks INNER JOIN States ON States.state_name = Parks.park_location AND Parks.park_type = 'National Seashore'")
+national_seashores = cur.fetchall()
+print(national_seashores)
 # CLOSE DATABASE FILE
 cur.close()
 
@@ -343,7 +359,7 @@ class NationalParkTest(unittest.TestCase):
 
 	def test_get_states_1(self):
 		test_park = NationalPark(html_parks[3])
-		self.assertEqual(type(test_park.get_states()), type([]), "Testing that the return type of get_states is a list")
+		self.assertEqual(type(test_park.get_states()), type(""), "Testing that the return type of get_states is a string")
 	def test_get_states_2(self):
 		test_park = NationalPark(html_parks[0])
 		self.assertEqual(len(test_park.get_states()) > 0, True, "Testing that the type of the first element of the list returned by get_states is a string")
