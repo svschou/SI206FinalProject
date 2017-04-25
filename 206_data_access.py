@@ -21,6 +21,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import sqlite3
+import collections
 
 # Begin filling in instructions....
 # Define NationalPark class that takes in an HTML string representing one National Park
@@ -315,24 +316,55 @@ conn.commit()
 # find any National Park whose name occurs in the articles text, return the name of the park, the title of the article and the article text
 query = cur.execute("SELECT Parks.park_name, Articles.article_title, Articles.article_text FROM Articles INNER JOIN Parks ON instr(Articles.article_text, Parks.park_name)")
 parks_in_articles = cur.fetchall() # list of tuples
-print(parks_in_articles)
 # for park in parks_in_articles:
 	# print(park)
 
 # find all the Natioal Parks that only reside in one state (only have one state in their location), return the state and the name of the park
 query = cur.execute("SELECT States.state_name, Parks.park_name FROM Parks INNER JOIN States ON States.state_name == Parks.park_location")
-non_shared_parks = cur.fetchall()
+nonshared_parks = cur.fetchall()
 # for park in non_shared_parks:
 # 	print(park)
 
 query = cur.execute("SELECT article_text FROM Articles")
-ext_of_articles = cur.fetchall()
+text_of_articles = cur.fetchall()
 # for text in text_of_articles:
 # 	print(text)
 
 query = cur.execute("SELECT Parks.park_name, States.state_name, States.state_av_temp FROM Parks INNER JOIN States ON States.state_name = Parks.park_location AND Parks.park_type = 'National Seashore'")
 national_seashores = cur.fetchall()
-print(national_seashores)
+
+
+# DATA MANIPULATION: ACCUMULATION WITH DICTIONARIES
+nonshared_parks_count_dict = {}
+for park_tup in nonshared_parks:
+	if park_tup[0] not in nonshared_parks_count_dict:
+		nonshared_parks_count_dict[park_tup[0]] = 0
+	nonshared_parks_count_dict[park_tup[0]] += 1
+# DATA MANIPULAITON: SORTING BY KEY PARAMETER
+sorted_nonshared_counts = sorted(nonshared_parks_count_dict, key = lambda x: nonshared_parks_count_dict[x], reverse = True)
+# grab data for top 3
+top_three_non_shared = [] # list of tuples
+for state in sorted_nonshared_counts[:3]:
+	list_of_parks = []
+	for park_tup in nonshared_parks:
+		if park_tup[0] == state:
+			list_of_parks.append(park_tup[1])
+	top_three_non_shared.append((state, nonshared_parks_count_dict[state], list_of_parks))
+# print(top_three_non_shared)
+
+# DATA MANIPULATION: LIST COMPREHENSION
+list_of_articles = [article_tup[0] for article_tup in text_of_articles]
+# connect all the texts together into one string
+total_article_text = ""
+for article_text in list_of_articles:
+	total_article_text += article_text + " "
+total_article_words = total_article_text.split()
+# DATA MANIPULATION: COLLECTIONS LIBRARY
+article_word_counts = collections.Counter(total_article_words)
+article_top_three = article_word_counts.most_common(3)
+
+
+
 # CLOSE DATABASE FILE
 cur.close()
 
